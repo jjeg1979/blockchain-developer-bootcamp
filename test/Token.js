@@ -7,7 +7,7 @@ const tokens = (n) => {
 }
 
 describe('Token', () => {
-    let token, accounts, deployer, receiver;
+    let token, accounts, deployer, receiver, exchange;
 
 
     // Fixture to use along the code
@@ -17,6 +17,7 @@ describe('Token', () => {
         accounts = await ethers.getSigners();
         deployer = accounts[0];
         receiver = accounts[1];
+        exchange = accounts[2];
     })
 
     // Describe Deployment
@@ -66,13 +67,13 @@ describe('Token', () => {
 
             it('emits a Transfer event', async () => {
                 const event = result.events[0];
-                expect(event.event).to.equal('Transfer')
+                expect(event.event).to.equal('Transfer');
 
                 const args = event.args;
-                expect(args.from).to.equal(deployer.address)
-                expect(args.to).to.equal(receiver.address)
-                expect(args.value).to.equal(amount)
-                expect(transaction).to.emit(token, 'Transfer').withArgs(deployer.address, receiver.address, amount)
+                expect(args.from).to.equal(deployer.address);
+                expect(args.to).to.equal(receiver.address);
+                expect(args.value).to.equal(amount);
+                expect(transaction).to.emit(token, 'Transfer').withArgs(deployer.address, receiver.address, amount);
             });
         });
 
@@ -88,5 +89,40 @@ describe('Token', () => {
                 await expect(token.connect(deployer).transfer(ethers.constants.AddressZero, amount)).to.be.reverted;
             });
         });
+    });
+
+    describe('Approving Tokens', () => {
+        let amount, transaction, result;
+
+        beforeEach(async () => {
+            amount = tokens(100);
+            transaction = await token.connect(deployer).approve(exchange.address, amount);
+            result = await transaction.wait();
+        });
+
+        describe('Success', () => {
+            it('allocates an allowance for delegated token spending', async () => {
+                expect(await token.allowance(deployer.address, exchange.address)).to.equal(amount);
+            });
+
+            it('emits  an Approval event', async () => {
+                const event = result.events[0];
+                expect(event.event).to.equal('Approval');
+
+                const args = event.args;
+                expect(args.owner).to.equal(deployer.address);
+                expect(args.spender).to.equal(exchange.address);
+                expect(args.value).to.equal(amount);
+                expect(transaction).to.emit(token, 'Approval').withArgs(deployer.address, exchange.address, amount);
+            });
+        });
+
+
+        describe('Failure', () => {
+            it('rejects invalid spenders', async () => {
+                await expect(token.connect(deployer).approve(ethers.constants.AddressZero, amount)).to.be.reverted;
+            });
+        });
+
     });
 });
