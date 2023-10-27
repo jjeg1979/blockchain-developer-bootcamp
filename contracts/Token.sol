@@ -61,8 +61,8 @@ contract Token{
         uint256 _value
     ) internal {
         // Require that sender has enough tokens to spend
-        require(balanceOf[_from] >= _value);
-        require(_to != address(0));
+        require(balanceOf[_from] >= _value, 'insufficient balance');
+        require(_to != address(0), 'cannot transfer to address 0');
         // Deduct tokens from spender        
         balanceOf[_from] -= _value;
         // Credit tokens to receiver
@@ -91,7 +91,7 @@ contract Token{
         returns (bool success)
     {        
         // Check approval
-        require(allowance[_from][msg.sender] >= _value);  
+        require(allowance[_from][msg.sender] >= _value, 'insufficient allowance');  
         // require(_value <= balanceOf[_from]);
         // Reset the allowance - Prevent double spending
         allowance[_from][msg.sender] -= _value;
