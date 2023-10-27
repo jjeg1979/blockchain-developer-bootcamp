@@ -125,4 +125,50 @@ describe('Token', () => {
         });
 
     });
+
+    describe('Delegated Token Transfers', () => {
+        let amount, transaction, result;
+
+        beforeEach(async () => {
+            amount = tokens(100);
+            transaction = await token.connect(deployer).approve(exchange.address, amount);
+            result = await transaction.wait();
+        });
+
+
+        describe('Sucess', () => {
+            beforeEach(async () => {
+                transaction = await token.connect(exchange).transferFrom(deployer.address, receiver.address, amount);
+                result = await transaction.wait();
+            });
+
+            it('transfers token balances', async () => {
+                expect(await token.balanceOf(deployer.address)).to.be.equal(tokens(999900))
+                expect(await token.balanceOf(receiver.address)).to.be.equal(amount)
+            });
+
+            it('resets the allowance', async () => {
+                expect(await token.allowance(deployer.address, exchange.address)).to.be.equal(0);
+            });
+
+            it('emits a Transfer event', async () => {
+                const event = result.events[0];
+                expect(event.event).to.equal('Transfer');
+
+                const args = event.args;
+                expect(args.from).to.equal(deployer.address);
+                expect(args.to).to.equal(receiver.address);
+                expect(args.value).to.equal(amount);
+                expect(transaction).to.emit(token, 'Transfer').withArgs(deployer.address, receiver.address, amount);
+            });
+        });
+
+        describe('Failure', async () => {
+            // Attempt to transfer too many tokens
+            it('rejects insufficient amounts', async () => {
+                const invalidAmount = tokens(100_000_000);
+                await expect(token.connect(exchange).transferFrom(deployer.address, receiver.address, invalidAmount)).to.be.reverted;
+            });
+        });
+    });
 });
