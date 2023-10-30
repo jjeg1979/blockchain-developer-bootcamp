@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 import "./Token.sol";
 
-contract Exchange { 
+contract Exchange {
     address public feeAccount; // the account that receives exchange fees
     uint256 public feePercent; // the fee percentage
 
@@ -13,10 +13,11 @@ contract Exchange {
     mapping(address => mapping(address => uint256)) public tokens;
 
     /* Events */
-    event Deposit(
-        address token, 
-        address user, 
-        uint256 amount, 
+    event Deposit(address token, address user, uint256 amount, uint256 balance);
+    event Withdraw(
+        address token,
+        address user,
+        uint256 amount,
         uint256 balance
     );
 
@@ -33,16 +34,26 @@ contract Exchange {
         // address(this) is the address of the contract Exchange to be referenced within the same contract
         require(Token(_token).transferFrom(msg.sender, address(this), _amount));
         // Update user balance
-        tokens[_token][msg.sender] += _amount;        
+        tokens[_token][msg.sender] += _amount;
         // Emit an event
         emit Deposit(_token, msg.sender, _amount, tokens[_token][msg.sender]);
     }
 
-    function balanceOf(address _token, address _user)
-        public 
-        view 
-        returns (uint256) 
-    {
+    function withdrawToken(address _token, uint256 _amount) public {
+        // Ensure user has enough tokens to withdraw
+        require(tokens[_token][msg.sender] >= _amount);
+        // Transfer tokens to the user
+        Token(_token).transfer(msg.sender, _amount);
+        // Update user balance
+        tokens[_token][msg.sender] -= _amount;
+        // Emit an  event
+        emit Withdraw(_token, msg.sender, _amount, tokens[_token][msg.sender]);
+    }
+
+    function balanceOf(
+        address _token,
+        address _user
+    ) public view returns (uint256) {
         return tokens[_token][_user];
     }
 }
