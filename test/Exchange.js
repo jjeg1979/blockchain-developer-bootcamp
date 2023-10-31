@@ -1,6 +1,7 @@
 const { expect } = require('chai');
 const { accessListify } = require('ethers/lib/utils');
 const { ethers } = require('hardhat');
+const { invalid } = require('moment/moment');
 
 
 const tokens = (n) => {
@@ -197,5 +198,80 @@ describe('Exchange', () => {
                 await expect(exchange.connect(user2).makeOrder(token2.address, amount, token1.address, amount)).to.be.reverted;
             });
         });
+    });
+
+    describe('Order actions', async () => {
+
+        let transaction, result;
+        const amount = tokens(1);
+
+        beforeEach(async () => {
+            // user1 deposits tokens
+            transaction = await token1.connect(user1).approve(exchange.address, amount);
+            result = await transaction.wait();
+
+            transaction = await exchange.connect(user1).depositToken(token1.address, amount);
+            result = await transaction.wait();
+
+            // Make an order
+            transaction = await exchange.connect(user1).makeOrder(token2.address, amount, token1.address, amount);
+            result = await transaction.wait();
+        });
+        describe('Cancelling orders', async () => {
+            describe('Success', async () => {
+
+                beforeEach(async () => {
+                    transaction = await exchange.connect(user1).cancelOrder(1);
+                    result = await transaction.wait();
+                });
+
+                it('updates canceled orders', async () => {
+                    expect(await exchange.orderCancelled(1)).to.equal(true);
+                });
+
+                it('emits an Cancel event', async () => {
+                    const event = result.events[0]; // 2 events are emitted
+                    expect(event.event).to.equal('Cancel');
+
+                    const args = event.args;
+                    expect(args.id).to.equal(1, 'id is correct');
+                    expect(args.user).to.equal(user1.address, 'user address is correct');
+                    expect(args.tokenGet).to.equal(token2.address, 'tokenGet is correct');
+                    expect(args.amountGet.toString()).to.equal(amount.toString(), 'amountGet is correct');
+                    expect(args.tokenGive).to.equal(token1.address, 'tokenGive is correct');
+                    expect(args.amountGive.toString()).to.equal(amount.toString(), 'amountGive is correct');
+                    expect(args.timestamp.toString()).to.not.equal(0, 'timestamp is present');
+                    expect(args.timestamp.toString()).to.not.equal(null, 'timestamp is present');
+                    expect(args.timestamp).to.at.least(1, 'timestamp is present');
+                });
+
+            });
+
+            describe('Failure', async () => {
+                beforeEach(async () => {
+                    // user1 deposits tokens
+                    transaction = await token1.connect(user1).approve(exchange.address, amount);
+                    result = await transaction.wait();
+
+                    transaction = await exchange.connect(user1).depositToken(token1.address, amount);
+                    result = await transaction.wait();
+
+                    // Make an order
+                    transaction = await exchange.connect(user1).makeOrder(token2.address, amount, token1.address, amount);
+                    result = await transaction.wait();
+                });
+
+                it('rejects invalid order ids', async () => {
+                    const invalidOrderId = 99999;
+                    await expect(exchange.connect(user1).cancelOrder(invalidOrderId)).to.be.reverted;
+                });
+
+                it('rejects unauthorized cancelations', async () => {
+                    await expect(exchange.connect(user2).cancelOrder(1)).to.be.reverted;
+                });
+
+            });
+        });
+
     });
 });
