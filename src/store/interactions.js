@@ -53,3 +53,58 @@ export const loadExchange = async (provider, address, dispatch) => {
 
     return exchange;
 }
+
+export const subscribeToEvents = (exchange, dispatch) => {
+    exchange.on('Deposit', (token, user, amount, balance, event) => {
+        dispatch({ type: 'TRANSFER_SUCESS', event });
+    })
+}
+
+
+// -------------------------------------------------------------------------------------------------------------------
+// LOAD USER BALANCES (WALLET & EXCHANGE BALANCES)
+
+export const loadBalances = async (exchange, tokens, account, dispatch) => {
+    // --------------------------------------------------
+    // TOKEN 1
+    // Wallet balance
+    let balance = ethers.utils.formatEther(await tokens[0].balanceOf(account), 18);
+    dispatch({ type: 'TOKEN_1_BALANCE_LOADED', balance });
+
+    // Exchange balance
+    balance = ethers.utils.formatEther(await exchange.balanceOf(tokens[0].address, account), 18);
+    dispatch({ type: 'EXCHANGE_TOKEN_1_BALANCE_LOADED', balance });
+
+    // --------------------------------------------------
+    // TOKEN 1
+    // Wallet balance
+    balance = ethers.utils.formatEther(await tokens[1].balanceOf(account), 18);
+    dispatch({ type: 'TOKEN_2_BALANCE_LOADED', balance });
+
+    // Exchange balance
+    balance = ethers.utils.formatEther(await exchange.balanceOf(tokens[1].address, account), 18);
+    dispatch({ type: 'EXCHANGE_TOKEN_2_BALANCE_LOADED', balance });
+
+}
+
+// -------------------------------------------------------------------------------------------------------------------
+// TRANSFER TOKENS (DEPOSI & WITHDRAWS)
+export const transferTokens = async (provider, exchange, transferType, token, amount, dispatch) => {
+    let transaction;
+
+    dispatch({ type: 'TRANSFER_REQUEST' });
+
+    try {
+        const signer = await provider.getSigner();
+        const amountToTransfer = ethers.utils.parseUnits(amount.toString(), 18);
+
+        transaction = await token.connect(signer).approve(exchange.address, amountToTransfer);
+        await transaction.wait();
+        transaction = await exchange.connect(signer).depositToken(token.address, amountToTransfer);
+
+        await transaction.wait();
+
+    } catch (error) {
+        dispatch({ type: 'TRANSFER_FAIL' });
+    }
+}
