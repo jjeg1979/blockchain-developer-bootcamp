@@ -39,11 +39,11 @@ function App() {
     const DApp = config[chainId].DApp;
     const mETH = config[chainId].mETH;
 
-    await loadTokens(provider, [DApp.address, mETH.address], dispatch);
+    (DApp && mETH) && await loadTokens(provider, [DApp.address, mETH.address], dispatch);
 
     // load exchange smart contract
     const exchangeConfig = config[chainId].exchange;
-    await loadExchange(provider, exchangeConfig.address, dispatch);
+    (exchangeConfig) && await loadExchange(provider, exchangeConfig.address, dispatch);
   };
 
   useEffect(() => {

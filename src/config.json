@@ -15,9 +15,9 @@
         "explorerURL": "#"
     },
     "42": {
-        "esplorerURL": "https://kovan.etherscan.io/"
+        "explorerURL": "https://kovan.etherscan.io/"
     },
     "11155111": {
-        "esplorerURL": "https://sepolia.etherscan.io/"
+        "explorerURL": "https://sepolia.etherscan.io/"
     }
 }
